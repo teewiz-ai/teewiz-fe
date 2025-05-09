@@ -10,13 +10,35 @@ import DesignStyleSelector from "@/components/design-style-selector"
 import Navigation from "@/components/navigation"
 import {generateDesignFile} from "@/app/actions"
 import { Loader2 } from "lucide-react"
+import { login } from '@/lib/auth';
+import { useRouter } from 'next/compat/router'
+import {useAuth} from "@/components/useAuth";
+import { createPrintfulProduct } from "@/app/actions";
+
 
 export default function Home() {
+  const session = useAuth();
+  const router = useRouter();
   const [prompt, setPrompt] = useState("")
   const [selectedColor, setSelectedColor] = useState("#000000")
   const [selectedStyle, setSelectedStyle] = useState("")
   const [designImage, setDesignImage] = useState("/images/tshirt-design.png")
   const [isGenerating, setIsGenerating] = useState(false)
+
+  async function handleBuy() {
+    try {
+      const prod = await createPrintfulProduct(
+        designImage,          // e.g. "/generated/6d3e….jpg"
+        selectedColor,        // "white", "black", …
+        prompt.slice(0, 60)   // product title
+      );
+      console.log("Printful product:", prod.id);
+    } catch (e) {
+      alert("Couldn’t create product – please try again");
+      return;
+    }
+    router.push("/checkout");   
+  }
 
   const handleGenerateDesign = async () => {
     if (!prompt) return
@@ -25,8 +47,9 @@ export default function Home() {
 
     try {
 
+      const designPrompt = `Generate a high‑resolution product mock‑up: a realistic ${selectedColor} T‑shirt (front view, studio lighting) with the following artwork printed centre‑front. Artwork description: "${prompt}". Render the artwork in ${selectedStyle} style. Show the entire T‑shirt; no additional objects or text.`;
 
-      const result = await generateDesignFile("Generate an image of: " + prompt + " in the style: " + selectedStyle + " on a realistic looking tshirt of color: " + selectedColor);
+      const result = await generateDesignFile(designPrompt);
       if (result.success) {
         setDesignImage(result.imageUrl);          // e.g. "/generated/6d3e….jpg"
       }
@@ -41,7 +64,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white flex flex-col">
       <Navigation />
 
       <main className="container mx-auto px-4 py-6">
@@ -55,7 +78,7 @@ export default function Home() {
                   width={300}
                   height={300}
                   className="w-full h-auto"
-                  unoptimized       // 👈 important for data-URI sources
+                  unoptimized
               />
             </div>
           </div>
@@ -96,7 +119,11 @@ export default function Home() {
               )}
             </Button>
 
-            <Button variant="outline" className="w-full mt-4 py-6 border-2">
+            <Button
+                variant="outline"
+                className="w-full mt-4 py-6 border-2"
+                onClick={handleBuy}
+            >
               Buy Now
             </Button>
           </div>
