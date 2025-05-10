@@ -13,16 +13,22 @@ import { Loader2 } from "lucide-react"
 import { login } from '@/lib/auth';
 import { useRouter } from 'next/compat/router'
 import {useAuth} from "@/components/useAuth";
-import { createPrintfulProduct } from "@/app/actions";
 
+import { createPrintfulProduct } from "@/app/actions";
+import dynamic from "next/dynamic"
+
+const TshirtCanvas = dynamic(() => import("@/components/TShirtCanvas"), {
+  ssr: false,           // ⬅ avoid Next.js SSR headaches with WebGL
+  loading: () => <p>Loading 3-D…</p>,
+})
 
 export default function Home() {
-  const session = useAuth();
+  // const session = useAuth();
   const router = useRouter();
   const [prompt, setPrompt] = useState("")
   const [selectedColor, setSelectedColor] = useState("#000000")
   const [selectedStyle, setSelectedStyle] = useState("")
-  const [designImage, setDesignImage] = useState("/images/tshirt-design.png")
+  const [designImage, setDesignImage] = useState("https://teeverse-designs-eu.s3.eu-central-1.amazonaws.com/generated/7285557b-3847-405d-935c-7921f1bc8296.jpg")
   const [isGenerating, setIsGenerating] = useState(false)
 
   async function handleBuy() {
@@ -47,8 +53,10 @@ export default function Home() {
 
     try {
 
-      const designPrompt = `Generate a high‑resolution product mock‑up: a realistic ${selectedColor} T‑shirt (front view, studio lighting) with the following artwork printed centre‑front. Artwork description: "${prompt}". Render the artwork in ${selectedStyle} style. Show the entire T‑shirt; no additional objects or text.`;
-
+      const designPrompt = `Generate a high-resolution transparent PNG design (opacity = 1).
+Artwork description: "${prompt}". 
+Render the artwork in realistic style. 
+Provide only the design on a fully transparent background`;
       const result = await generateDesignFile(designPrompt);
       if (result.success) {
         setDesignImage(result.imageUrl);          // e.g. "/generated/6d3e….jpg"
@@ -71,15 +79,8 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* T-shirt Preview */}
           <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
-            <div className="relative w-full max-w-md">
-              <Image
-                  src={designImage || "/images/tshirt.png"}
-                  alt="T-shirt design"
-                  width={300}
-                  height={300}
-                  className="w-full h-auto"
-                  unoptimized
-              />
+            <div className="relative w-full max-w-md h-[400px]">
+              <TshirtCanvas imageUrl={designImage} />
             </div>
           </div>
 
