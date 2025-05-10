@@ -8,7 +8,7 @@ import { Sparkles, ChevronRight } from "lucide-react"
 import ColorPicker from "@/components/color-picker"
 import DesignStyleSelector from "@/components/design-style-selector"
 import Navigation from "@/components/navigation"
-import {generateDesignFile} from "@/app/actions"
+import {generateDesignFile, generateMockupDataUrl} from "@/app/actions"
 import { Loader2 } from "lucide-react"
 import { login } from '@/lib/auth';
 import { useRouter } from 'next/compat/router'
@@ -31,6 +31,8 @@ export default function Home() {
   const [designImage, setDesignImage] = useState("https://teeverse-designs-eu.s3.eu-central-1.amazonaws.com/generated/7285557b-3847-405d-935c-7921f1bc8296.jpg")
   const [isGenerating, setIsGenerating] = useState(false)
 
+  const [mockupUrl, setMockupUrl] = useState<string>("")
+
   async function handleBuy() {
     try {
       const prod = await createPrintfulProduct(
@@ -46,30 +48,29 @@ export default function Home() {
     router.push("/checkout");   
   }
 
-  const handleGenerateDesign = async () => {
+  const handleGenerateAndPreview = async () => {
     if (!prompt) return
-
     setIsGenerating(true)
 
     try {
+      const designPrompt = `Generate a high-resolution transparent PNG design (opacity = 1).\nArtwork description: "${prompt}". \nRender the artwork in "${selectedStyle}" style. \nProvide only the design on a fully transparent background`
+      const result = await generateDesignFile(designPrompt)
+      if (!result.success) throw new Error("Design failed")
+      setDesignImage(result.imageUrl)
 
-      const designPrompt = `Generate a high-resolution transparent PNG design (opacity = 1).
-Artwork description: "${prompt}". 
-Render the artwork in realistic style. 
-Provide only the design on a fully transparent background`;
-      const result = await generateDesignFile(designPrompt);
-      if (result.success) {
-        setDesignImage(result.imageUrl);          // e.g. "/generated/6d3e….jpg"
-      }
-      else {
-        console.error("Failed to generate design")
-      }
+      const urlParts = result.imageUrl.split('/')
+      const s3Key = urlParts.slice(-2).join('/')
+      const mockup = await generateMockupDataUrl(s3Key, "#00ff00")
+      setMockupUrl(mockup)
+
     } catch (error) {
-      console.error("Error generating design:", error)
+      console.error(error)
+      alert("There was an error generating your mockup. Please try again.")
     } finally {
       setIsGenerating(false)
     }
   }
+
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -80,13 +81,16 @@ Provide only the design on a fully transparent background`;
           {/* T-shirt Preview */}
           <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
             <div className="relative w-full max-w-md h-[400px]">
-              <TshirtCanvas
-                  color="#ff0000"                  // base red color
-                  logoTextureUrl="/images/tshirt.png"       // small logo decal
-                  fullTextureUrl="images/tshirt.png"    // full-shirt decal
-                  isLogoTexture={true}                  // toggle logo
-                  isFullTexture={true}            // toggle full texture
-              />
+              {mockupUrl ? (
+                  <Image
+                      src={mockupUrl}
+                      width={600}
+                      height={600}
+                      alt="T-shirt mockup"
+                  />
+              ) : (
+                  <p className="text-gray-500">Preview will appear here</p>
+              )}
             </div>
           </div>
 
@@ -112,7 +116,7 @@ Provide only the design on a fully transparent background`;
 
             <Button
               className="w-full mt-8 bg-blue-500 hover:bg-blue-600 text-white py-6"
-              onClick={handleGenerateDesign}
+              onClick={handleGenerateAndPreview}
               disabled={isGenerating || !prompt}
             >
               {isGenerating ? (
