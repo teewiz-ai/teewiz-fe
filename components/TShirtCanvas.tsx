@@ -1,74 +1,43 @@
-"use client"
+'use client';
 
-import { Canvas } from "@react-three/fiber"
-import { Suspense, useMemo, useState } from "react"
-import { OrbitControls, Decal, Environment } from "@react-three/drei"
-import { TextureLoader, MathUtils as M } from "three"
-import { useGesture } from "@use-gesture/react"
-import { Model as TshirtModelRaw } from "@/components/Tshirt" // rename your gltfjsx output to .tsx
+import React, { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Environment, Center } from '@react-three/drei';
+import { ShirtProps } from './Shirt';
 
-interface TshirtCanvasProps {
-    imageUrl: string
-}
+// Lazy-load Shirt component
+const Shirt = dynamic(() => import('./Shirt').then((mod) => mod.default), {
+    ssr: false,
+    suspense: true,
+});
 
-export default function TshirtCanvas({ imageUrl }: TshirtCanvasProps) {
-    return (
-        <Canvas
-            frameloop="demand"
-            camera={{ position: [0, 0, 3], fov: 15 }}
-            className="w-full h-full"
-        >
-            <ambientLight intensity={0.7} />
-            <directionalLight position={[4, 6, 4]} intensity={0.9} />
-            <Suspense fallback={null}>
-                <InteractiveTshirt imageUrl={imageUrl} />
-                <Environment preset="city" />
-            </Suspense>
-            <OrbitControls makeDefault enablePan={false} />
-        </Canvas>
-    )
-}
+export interface TshirtCanvasProps extends ShirtProps {}
 
-function InteractiveTshirt({ imageUrl }: { imageUrl: string }) {
-    const texture = useMemo(() => new TextureLoader().load(imageUrl), [imageUrl])
-    const [offset, setOffset] = useState<[number, number]>([0, 0])
-    const [scale, setScale] = useState(0.6)
-    const clamp = (v: number, min: number, max: number) => M.clamp(v, min, max)
+const TshirtCanvas: React.FC<TshirtCanvasProps> = (props) => (
+    <Canvas
+        camera={{ position: [0, 1, 3], fov: 45 }}
+        style={{ width: '100%', height: '100%', touchAction: 'none' }}
+    >
+        <ambientLight intensity={0.45} />
+        <directionalLight
+            position={[5, 10, 5]}
+            intensity={1.2}
+            castShadow={true}
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+        />
 
-    const bind = useGesture(
-        {
-            onDrag: ({ movement: [mx, my] }) => {
-                const nx = clamp(mx / 200, -0.45, 0.45)
-                const ny = clamp(-my / 200, -0.55, 0.4)
-                setOffset([nx, ny])
-            },
-            onWheel: ({ delta: [, dy] }) =>
-                setScale((s) => clamp(s - dy / 500, 0.25, 1.2)),
-            onPinch: ({ offset: [d] }) =>
-                setScale((s) => clamp(0.6 + d / 300, 0.25, 1.2)),
-        },
-        { drag: { filterTaps: true } }
-    )
+        <Suspense fallback={null}>
+            <Center>
+                <Shirt {...props} />
+            </Center>
 
-    return (
-        <group {...bind()}>
-            <TshirtModelRaw position={[0, -1.3, 0]}>
-                <Decal
-                    position={[offset[0], offset[1], 0.187]}
-                    rotation={[0, 0, 0]}
-                    scale={scale}
-                    map={texture}
-                />
-            </TshirtModelRaw>
-            <mesh
-                position={[0, 0, 0.25]}
-                rotation={[0, 0, 0]}
-                visible={false}
-                {...bind()}
-            >
-                <planeGeometry args={[1, 1.5]} />
-                <meshBasicMaterial transparent={true} opacity={0} />
-            </mesh>
-        </group>
-    )
-}
+            <Environment preset="studio" />
+        </Suspense>
+
+        <OrbitControls makeDefault enablePan enableZoom enableRotate />
+    </Canvas>
+);
+
+export default TshirtCanvas;

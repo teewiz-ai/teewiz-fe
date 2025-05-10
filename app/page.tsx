@@ -80,7 +80,13 @@ Provide only the design on a fully transparent background`;
           {/* T-shirt Preview */}
           <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
             <div className="relative w-full max-w-md h-[400px]">
-              <TshirtCanvas imageUrl={designImage} />
+              <TshirtCanvas
+                  color="#ff0000"                  // base red color
+                  logoTextureUrl="/images/tshirt.png"       // small logo decal
+                  fullTextureUrl="images/tshirt.png"    // full-shirt decal
+                  isLogoTexture={true}                  // toggle logo
+                  isFullTexture={true}            // toggle full texture
+              />
             </div>
           </div>
 
