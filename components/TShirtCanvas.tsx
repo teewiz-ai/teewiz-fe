@@ -15,7 +15,7 @@ export default function TshirtCanvas({ imageUrl }: TshirtCanvasProps) {
     return (
         <Canvas
             frameloop="demand"
-            camera={{ position: [0, 0, 3], fov: 20 }}
+            camera={{ position: [0, 0, 3], fov: 15 }}
             className="w-full h-full"
         >
             <ambientLight intensity={0.7} />
