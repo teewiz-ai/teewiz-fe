@@ -25,6 +25,7 @@ export async function generateDesignFile(prompt: string) {
     // size: "1024x1024",
     background: "transparent",
     quality: "high",
+    moderation: "low"
   });
   const base64 = data[0].b64_json;
   const buffer = Buffer.from(base64, "base64");
@@ -54,10 +55,10 @@ export async function generateDesignFile(prompt: string) {
 }
 
 let whiteShirtBuffer: Buffer | null = null;
-async function loadWhiteShirt(): Promise<Buffer> {
+async function loadBaseShirtWithLogo(): Promise<Buffer> {
     if (!whiteShirtBuffer) {
-        const filePath = path.join(process.cwd(), "public", "tshirts", "white.png");
-    whiteShirtBuffer = await fs.readFile(filePath);
+        const filePath = path.join(process.cwd(), "public", "tshirts", "white-with-logo.png");
+        whiteShirtBuffer = await fs.readFile(filePath);
   }
   return whiteShirtBuffer;
 }
@@ -69,7 +70,8 @@ async function loadWhiteShirt(): Promise<Buffer> {
  */
 export async function generateMockupDataUrl(
   s3Key: string,
-  shirtColorHex: string
+  shirtColorHex: string,
+  position?: { x: number, y: number, width: number, height: number }
 ): Promise<string> {
   // 1) Download the design from your private S3 bucket
   const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: s3Key });
@@ -78,23 +80,55 @@ export async function generateMockupDataUrl(
   for await (const chunk of Body as any) {
     chunks.push(Buffer.from(chunk));
   }
-    const originalDesignBuffer = Buffer.concat(chunks);
+  const originalDesignBuffer = Buffer.concat(chunks);
 
-    const designBuffer = await sharp(originalDesignBuffer)
-        .resize({ width: 400, height: 400, fit: 'inside' })
-        .png()
-        .toBuffer();
+  // Get base shirt with logo
+  const baseShirt = await loadBaseShirtWithLogo();
+  const coloredShirt = await sharp(baseShirt)
+    .toBuffer();
 
-  const base = await loadWhiteShirt();
-  const coloredShirt = await sharp(base)
+  // Get the dimensions of the shirt image
+  const shirtMetadata = await sharp(coloredShirt).metadata();
+  const shirtWidth = shirtMetadata.width || 600;
+  const shirtHeight = shirtMetadata.height || 600;
+
+  // Canvas dimensions (from TShirtCanvas)
+  const canvasWidth = 600;
+  const canvasHeight = 600;
+
+  // Calculate scale factors
+  const scaleX = shirtWidth / canvasWidth;
+  const scaleY = shirtHeight / canvasHeight;
+
+  // Scale the position from canvas coordinates to image coordinates
+  const scaledPosition = position ? {
+    x: Math.round(position.x * scaleX),
+    y: Math.round(position.y * scaleY),
+    width: Math.round(position.width * scaleX),
+    height: Math.round(position.height * scaleY)
+  } : {
+    x: Math.round((shirtWidth - 400) / 2),
+    y: Math.round((shirtHeight - 400) / 2),
+    width: 400,
+    height: 400
+  };
+
+  const designBuffer = await sharp(originalDesignBuffer)
+    .resize({ 
+      width: scaledPosition.width,
+      height: scaledPosition.height,
+      fit: 'inside' 
+    })
+    .png()
     .toBuffer();
 
   const composited = await sharp(coloredShirt)
     .composite([
       {
         input: designBuffer,
-        gravity: "centre",
         blend: "multiply",
+        top: scaledPosition.y,
+        left: scaledPosition.x,
       },
     ])
     .png()

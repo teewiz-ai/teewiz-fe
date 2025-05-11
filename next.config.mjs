@@ -20,6 +20,14 @@ const nextConfig = {
       // add extra patterns here (e.g., CloudFront URL) if you later switch
     ],
   },
+  webpack(config, { isServer }) {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+    }
+
+    return config
+  }
 }
 
 export default nextConfig

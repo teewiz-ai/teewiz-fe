@@ -16,6 +16,7 @@ import {useAuth} from "@/components/useAuth";
 
 import { createPrintfulProduct } from "@/app/actions";
 import dynamic from "next/dynamic"
+import TShirtCanvas from "@/components/TShirtCanvas";
 
 const TshirtCanvas = dynamic(() => import("@/components/TShirtCanvas"), {
   ssr: false,           // ⬅ avoid Next.js SSR headaches with WebGL
@@ -30,8 +31,8 @@ export default function Home() {
   const [selectedStyle, setSelectedStyle] = useState("")
   const [designImage, setDesignImage] = useState("https://teeverse-designs-eu.s3.eu-central-1.amazonaws.com/generated/7285557b-3847-405d-935c-7921f1bc8296.jpg")
   const [isGenerating, setIsGenerating] = useState(false)
-
   const [mockupUrl, setMockupUrl] = useState<string>("")
+  const [designPosition, setDesignPosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null)
 
   async function handleBuy() {
     try {
@@ -42,7 +43,7 @@ export default function Home() {
       );
       console.log("Printful product:", prod.id);
     } catch (e) {
-      alert("Couldn’t create product – please try again");
+      alert("Couldn't create product – please try again");
       return;
     }
     router.push("/checkout");   
@@ -80,14 +81,53 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* T-shirt Preview */}
           <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
-            <div className="relative w-full max-w-md h-[400px]">
+            <div className="relative w-full h-[600px]">
               {mockupUrl ? (
-                  <Image
-                      src={mockupUrl}
-                      width={600}
-                      height={600}
-                      alt="T-shirt mockup"
-                  />
+                  <div className="relative w-full h-full">
+                      <Image
+                          src={mockupUrl}
+                          alt="Final t-shirt mockup"
+                          fill
+                          className="object-contain"
+                      />
+                      <Button
+                          className="absolute top-4 right-4 bg-white hover:bg-gray-100 text-gray-900 shadow-md"
+                          onClick={() => setMockupUrl("")}
+                      >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                              <path d="m15 5 4 4"/>
+                          </svg>
+                          Edit Design
+                      </Button>
+                  </div>
+              ) : designImage ? (
+                  <div className="w-full h-full">
+                      <TShirtCanvas
+                          shirtImage="/tshirts/white.png"
+                          designImage={designImage}
+                          width={600}
+                          height={600}
+                          onConfirm={async (dataUrl, position) => {
+                              try {
+                                  // Extract the S3 key from the design image URL
+                                  const urlParts = designImage.split('/');
+                                  const s3Key = urlParts.slice(-2).join('/');
+                                  
+                                  // Store the position for the mockup generation
+                                  setDesignPosition(position);
+                                  
+                                  // Generate the blended mockup with position
+                                  const mockupDataUrl = await generateMockupDataUrl(s3Key, selectedColor, position);
+                                  setMockupUrl(mockupDataUrl);
+                                  console.log("Mockup generated successfully");
+                              } catch (error) {
+                                  console.error("Error generating mockup:", error);
+                                  alert("Failed to generate mockup. Please try again.");
+                              }
+                          }}
+                      />
+                  </div>
               ) : (
                   <p className="text-gray-500">Preview will appear here</p>
               )}
