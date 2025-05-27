@@ -39,7 +39,8 @@ export default function Home() {
       const prod = await createPrintfulProduct(
         designImage,          // e.g. "/generated/6d3e….jpg"
         selectedColor,        // "white", "black", …
-        prompt.slice(0, 60)   // product title
+        prompt.slice(0, 60),  // product title
+        designPosition        // pass the design position
       );
       console.log("Printful product:", prod.id);
     } catch (e) {
