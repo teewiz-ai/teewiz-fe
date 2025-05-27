@@ -56,10 +56,18 @@ export async function generateDesignFile(prompt: string) {
 
 let whiteShirtBuffer: Buffer | null = null;
 async function loadBaseShirtWithLogo(): Promise<Buffer> {
-    if (!whiteShirtBuffer) {
-        const filePath = path.join(process.cwd(), "src", "assets", "tshirts", "white-with-logo.png");
-        whiteShirtBuffer = await fs.readFile(filePath);
+  if (!whiteShirtBuffer) {
+    const imageUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://your-project-name.vercel.app'}/tshirts/white-with-logo.png`;
+
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    whiteShirtBuffer = Buffer.from(arrayBuffer);
   }
+
   return whiteShirtBuffer;
 }
 
