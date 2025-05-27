@@ -16,11 +16,10 @@ import {useAuth} from "@/components/useAuth";
 
 import { createPrintfulProduct } from "@/app/actions";
 import dynamic from "next/dynamic"
-import TShirtCanvas from "@/components/TShirtCanvas";
 
-const TshirtCanvas = dynamic(() => import("@/components/TShirtCanvas"), {
-  ssr: false,           // ⬅ avoid Next.js SSR headaches with WebGL
-  loading: () => <p>Loading 3-D…</p>,
+const TShirtCanvas = dynamic(() => import("@/components/TShirtCanvas"), {
+  ssr: false,
+  loading: () => <p>Loading canvas…</p>,
 })
 
 export default function Home() {
