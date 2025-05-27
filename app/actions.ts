@@ -57,7 +57,7 @@ export async function generateDesignFile(prompt: string) {
 let whiteShirtBuffer: Buffer | null = null;
 async function loadBaseShirtWithLogo(): Promise<Buffer> {
     if (!whiteShirtBuffer) {
-        const filePath = path.join(process.cwd(), "public", "tshirts", "white-with-logo.png");
+        const filePath = path.join(process.cwd(), "src", "assets", "tshirts", "white-with-logo.png");
         whiteShirtBuffer = await fs.readFile(filePath);
   }
   return whiteShirtBuffer;
