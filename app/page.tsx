@@ -17,7 +17,7 @@ import {useAuth} from "@/components/useAuth";
 import { createPrintfulProduct } from "@/app/actions";
 import dynamic from "next/dynamic"
 
-const TShirtCanvas = dynamic(() => import("@/components/TShirtCanvas"), {
+const TShirtCanvas = dynamic(() => import("@/components/TShirtCanvas.client"), {
   ssr: false,
   loading: () => <p>Loading canvas…</p>,
 })
@@ -43,7 +43,6 @@ export default function Home() {
       );
       console.log("Printful product:", prod.id);
     } catch (e) {
-      alert("Couldn't create product – please try again");
       return;
     }
     router.push("/checkout");   
@@ -66,7 +65,6 @@ export default function Home() {
 
     } catch (error) {
       console.error(error)
-      alert("There was an error generating your mockup. Please try again.")
     } finally {
       setIsGenerating(false)
     }
@@ -123,7 +121,6 @@ export default function Home() {
                                   console.log("Mockup generated successfully");
                               } catch (error) {
                                   console.error("Error generating mockup:", error);
-                                  alert("Failed to generate mockup. Please try again.");
                               }
                           }}
                       />

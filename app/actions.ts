@@ -92,7 +92,7 @@ export async function generateMockupDataUrl(
   const shirtWidth = shirtMetadata.width || 600;
   const shirtHeight = shirtMetadata.height || 600;
 
-  // Canvas dimensions (from TShirtCanvas)
+  // Canvas dimensions (from TShirtCanvasClient)
   const canvasWidth = 600;
   const canvasHeight = 600;
 

@@ -19,7 +19,7 @@ interface TShirtCanvasProps {
     onConfirm: (dataUrl: string, position: { x: number, y: number, width: number, height: number }) => void
 }
 
-const TShirtCanvas: FC<TShirtCanvasProps> = ({
+const TShirtCanvasClient: FC<TShirtCanvasProps> = ({
                                                  shirtImage,
                                                  designImage,
                                                  width = 600,
@@ -203,4 +203,4 @@ const TShirtCanvas: FC<TShirtCanvasProps> = ({
     )
 }
 
-export default TShirtCanvas
+export default TShirtCanvasClient
