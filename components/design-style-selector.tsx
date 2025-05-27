@@ -16,6 +16,7 @@ export default function DesignStyleSelector({ selectedStyle, onSelectStyle }: De
     { name: "Calligraphy", icon: <PenTool className="h-5 w-5 mr-2" /> },
     { name: "Graffiti", icon: <Paintbrush className="h-5 w-5 mr-2" /> },
     { name: "Minimal-Geo", icon: <Square className="h-5 w-5 mr-2" /> },
+    {name: "Realistic", icon: <Paintbrush className="h-5 w-5 mr-2" /> },
   ]
 
   return (
