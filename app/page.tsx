@@ -215,7 +215,7 @@ Provide only the design on a fully transparent background.`
         <section className="bg-white py-16">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Choose DesignTee AI?</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Choose TeeWiz.ai?</h3>
               <p className="text-gray-600 max-w-2xl mx-auto">
                 Our advanced AI technology makes creating professional t-shirt designs accessible to everyone
               </p>
