@@ -2,20 +2,19 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import dynamic from "next/dynamic"
+import { useRouter } from "next/compat/router"
+import { Sparkles, Loader2 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sparkles, ChevronRight } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+
 import ColorPicker from "@/components/color-picker"
 import DesignStyleSelector from "@/components/design-style-selector"
-import Navigation from "@/components/navigation"
-import {generateDesignFile, generateMockupDataUrl} from "@/app/actions"
-import { Loader2 } from "lucide-react"
-import { login } from '@/lib/auth';
-import { useRouter } from 'next/compat/router'
-import {useAuth} from "@/components/useAuth";
 
-import { createPrintfulProduct } from "@/app/actions";
-import dynamic from "next/dynamic"
+import { generateDesignFile, generateMockupDataUrl, createPrintfulProduct } from "@/app/actions"
+import { useAuth } from "@/components/useAuth"
 
 const TShirtCanvas = dynamic(() => import("@/components/TShirtCanvas.client"), {
   ssr: false,
@@ -23,12 +22,13 @@ const TShirtCanvas = dynamic(() => import("@/components/TShirtCanvas.client"), {
 })
 
 export default function Home() {
-  // const session = useAuth();
-  const router = useRouter();
+  const router = useRouter()
+  // const { user, loading: authLoading } = useAuth()
+
   const [prompt, setPrompt] = useState("")
   const [selectedColor, setSelectedColor] = useState("#000000")
   const [selectedStyle, setSelectedStyle] = useState("")
-  const [designImage, setDesignImage] = useState("https://teeverse-designs-eu.s3.eu-central-1.amazonaws.com/generated/7285557b-3847-405d-935c-7921f1bc8296.jpg")
+  const [designImage, setDesignImage] = useState<string>("https://teeverse-designs-eu.s3.eu-central-1.amazonaws.com/generated/7285557b-3847-405d-935c-7921f1bc8296.jpg")
   const [isGenerating, setIsGenerating] = useState(false)
   const [mockupUrl, setMockupUrl] = useState<string>("")
   const [designPosition, setDesignPosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null)
@@ -36,33 +36,34 @@ export default function Home() {
   async function handleBuy() {
     try {
       const prod = await createPrintfulProduct(
-        designImage,          // e.g. "/generated/6d3e….jpg"
-        selectedColor,        // "white", "black", …
-        prompt.slice(0, 60),  // product title
-        designPosition        // pass the design position
-      );
-      console.log("Printful product:", prod.id);
+          designImage,
+          selectedColor,
+          prompt.slice(0, 60),
+          designPosition
+      )
+      console.log("Printful product:", prod.id)
+      router.push("/checkout")
     } catch (e) {
-      return;
+      console.error("Failed to create product", e)
     }
-    router.push("/checkout");   
   }
 
   const handleGenerateAndPreview = async () => {
-    if (!prompt) return
+    if (!prompt.trim()) return
     setIsGenerating(true)
-
     try {
-      const designPrompt = `Generate a high-resolution transparent PNG design (opacity = 1).\nArtwork description: "${prompt}". \nRender the artwork in "${selectedStyle}" style. \nProvide only the design on a fully transparent background`
+      const designPrompt = `Generate a high-resolution transparent PNG design (opacity = 1).
+Artwork description: "${prompt}".
+Render the artwork in "${selectedStyle}" style.
+Provide only the design on a fully transparent background.`
       const result = await generateDesignFile(designPrompt)
-      if (!result.success) throw new Error("Design failed")
+      if (!result.success) throw new Error("Design generation failed")
       setDesignImage(result.imageUrl)
 
       const urlParts = result.imageUrl.split('/')
       const s3Key = urlParts.slice(-2).join('/')
-      const mockup = await generateMockupDataUrl(s3Key, "#00ff00")
+      const mockup = await generateMockupDataUrl(s3Key, selectedColor)
       setMockupUrl(mockup)
-
     } catch (error) {
       console.error(error)
     } finally {
@@ -70,18 +71,72 @@ export default function Home() {
     }
   }
 
+  const features = [
+    {
+      icon: <Sparkles className="h-6 w-6 text-purple-600" />,
+      title: "AI-Powered Design",
+      description: "Advanced AI creates unique designs from your text prompts",
+    },
+    {
+      icon: <Image src="/tshirt-icon.svg" alt="T-Shirt" width={24} height={24} className="text-purple-600" />,
+      title: "Multiple T-Shirt Styles",
+      description: "Preview your design on various t-shirt colors and styles",
+    },
+    {
+      icon: <Image src="/palette-icon.svg" alt="Palette" width={24} height={24} className="text-purple-600" />,
+      title: "Customizable Colors",
+      description: "Adjust colors, size, and placement to perfect your design",
+    },
+  ]
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Navigation />
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex flex-col font-sans antialiased text-gray-800">
+        {/* Transparent Navbar */}
+        <header className="border-b bg-white/20 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="h-8 w-8 text-purple-600" />
+              <h1 className="text-2xl font-bold text-gray-900">TeeWiz</h1>
+            </div>
+            <nav className="hidden md:flex items-center space-x-6">
+              <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors">Gallery</a>
+              <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors">Pricing</a>
+              <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors">About</a>
+              {/*{user ? (*/}
+              {/*    <Button variant="outline">Account</Button>*/}
+              {/*) : (*/}
+              {/*    <Button variant="outline" onClick={() => login()}>Sign In</Button>*/}
+              {/*)}*/}
+              <Button variant="outline">Account</Button>
+            </nav>
+          </div>
+        </header>
 
-      <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* T-shirt Preview */}
-          <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
-            <div className="relative w-full h-[600px]">
-              {mockupUrl ? (
-                  <div className="relative w-full h-full">
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 py-16 text-center">
+          <Badge variant="secondary" className="mb-4">
+            <Sparkles className="h-4 w-4 mr-1" />
+            AI-Powered Design Generator
+          </Badge>
+          <h2 className="text-5xl font-bold text-gray-900 mb-6">
+            Turn Your Ideas Into
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
+            {" "}Wearable Art
+          </span>
+          </h2>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Simply describe your vision and watch our AI create stunning, unique t-shirt designs in seconds.
+          </p>
+        </section>
+
+        {/* Main Design Interface */}
+        <main className="container mx-auto px-4 py-6 flex-grow">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* T-shirt Preview */}
+            <div className="bg-white rounded-lg p-8 flex items-center justify-center border border-gray-200 shadow-lg">
+              <div className="relative w-full h-[600px]">
+                {mockupUrl ? (
+                    <div className="relative w-full h-full">
                       <Image
                           src={mockupUrl}
                           alt="Final t-shirt mockup"
@@ -92,123 +147,99 @@ export default function Home() {
                           className="absolute top-4 right-4 bg-white hover:bg-gray-100 text-gray-900 shadow-md"
                           onClick={() => setMockupUrl("")}
                       >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                              <path d="m15 5 4 4"/>
-                          </svg>
-                          Edit Design
+                        Edit Design
                       </Button>
+                    </div>
+                ) : designImage ? (
+                    <TShirtCanvas
+                        shirtImage="/tshirts/white.png"
+                        designImage={designImage}
+                        width={600}
+                        height={600}
+                        onConfirm={async (dataUrl, position) => {
+                          const urlParts = designImage.split('/')
+                          const s3Key = urlParts.slice(-2).join('/')
+                          setDesignPosition(position)
+                          const mockupDataUrl = await generateMockupDataUrl(s3Key, selectedColor, position)
+                          setMockupUrl(mockupDataUrl)
+                        }}
+                    />
+                ) : (
+                    <p className="text-gray-500">Preview will appear here</p>
+                )}
+              </div>
+            </div>
+
+            {/* Design Controls */}
+            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-lg">
+              <h2 className="text-xl font-semibold mb-4">Describe your design...</h2>
+              <Input
+                  placeholder="Describe your design..."
+                  className="mb-2"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+              />
+              <p className="text-gray-600 mb-6">e.g. "retro neon cyber-cat with sunglasses"</p>
+              <DesignStyleSelector selectedStyle={selectedStyle} onSelectStyle={setSelectedStyle} />
+              <div className="mt-8">
+                <h3 className="text-lg font-medium mb-4">Color picker</h3>
+                <ColorPicker selectedColor={selectedColor} onSelectColor={setSelectedColor} />
+              </div>
+              <Button
+                  className="w-full mt-8 bg-blue-500 hover:bg-blue-600 text-white py-6"
+                  onClick={handleGenerateAndPreview}
+                  disabled={isGenerating || !prompt.trim()}
+              >
+                {isGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating...
+                    </>
+                ) : (
+                    <>
+                      <Sparkles className="mr-2 h-5 w-5" /> Generate Design
+                    </>
+                )}
+              </Button>
+              <Button
+                  variant="outline"
+                  className="w-full mt-4 py-6 border-2"
+                  onClick={handleBuy}
+              >
+                Buy Now
+              </Button>
+            </div>
+          </div>
+        </main>
+
+        {/* Features Section */}
+        <section className="bg-white py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">Why Choose DesignTee AI?</h3>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                Our advanced AI technology makes creating professional t-shirt designs accessible to everyone
+              </p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {features.map((feature, idx) => (
+                  <div key={idx} className="text-center rounded-lg p-6 shadow-md">
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                      {feature.icon}
+                    </div>
+                    <h4 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h4>
+                    <p className="text-gray-600">{feature.description}</p>
                   </div>
-              ) : designImage ? (
-                  <div className="w-full h-full">
-                      <TShirtCanvas
-                          shirtImage="/tshirts/white.png"
-                          designImage={designImage}
-                          width={600}
-                          height={600}
-                          onConfirm={async (dataUrl, position) => {
-                              try {
-                                  // Extract the S3 key from the design image URL
-                                  const urlParts = designImage.split('/');
-                                  const s3Key = urlParts.slice(-2).join('/');
-                                  
-                                  // Store the position for the mockup generation
-                                  setDesignPosition(position);
-                                  
-                                  // Generate the blended mockup with position
-                                  const mockupDataUrl = await generateMockupDataUrl(s3Key, selectedColor, position);
-                                  setMockupUrl(mockupDataUrl);
-                                  console.log("Mockup generated successfully");
-                              } catch (error) {
-                                  console.error("Error generating mockup:", error);
-                              }
-                          }}
-                      />
-                  </div>
-              ) : (
-                  <p className="text-gray-500">Preview will appear here</p>
-              )}
+              ))}
             </div>
           </div>
+        </section>
 
-          {/* Design Controls */}
-          <div className="bg-gray-50 rounded-lg p-8">
-            <h2 className="text-xl font-semibold mb-4">Describe your design...</h2>
-
-            <Input
-              placeholder="Describe your design..."
-              className="mb-2"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-
-            <p className="text-gray-600 mb-6">e.g. "retro neon cyber-cat with sunglasses"</p>
-
-            <DesignStyleSelector selectedStyle={selectedStyle} onSelectStyle={setSelectedStyle} />
-
-            <div className="mt-8">
-              <h3 className="text-lg font-medium mb-4">Color picker</h3>
-              <ColorPicker selectedColor={selectedColor} onSelectColor={setSelectedColor} />
-            </div>
-
-            <Button
-              className="w-full mt-8 bg-blue-500 hover:bg-blue-600 text-white py-6"
-              onClick={handleGenerateAndPreview}
-              disabled={isGenerating || !prompt}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-5 w-5" /> Generate Design
-                </>
-              )}
-            </Button>
-
-            <Button
-                variant="outline"
-                className="w-full mt-4 py-6 border-2"
-                onClick={handleBuy}
-            >
-              Buy Now
-            </Button>
+        {/* Footer */}
+        <footer className="bg-gray-900 text-white py-12">
+          <div className="container mx-auto px-4 text-center">
+            <p>&copy; {new Date().getFullYear()} TeeWiz. All rights reserved.</p>
           </div>
-        </div>
-
-        <div className="mt-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Your recent designs</h2>
-            <Button variant="ghost" className="flex items-center">
-              See all <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white border rounded-lg p-4 flex items-center">
-              <span className="text-2xl mr-3">🎮</span>
-              <span className="font-medium">Synthwave tiger</span>
-            </div>
-            <div className="bg-white border rounded-lg p-4 flex items-center">
-              <span className="text-2xl mr-3">🔺</span>
-              <span className="font-medium">Minimalist mountain</span>
-            </div>
-            <div className="bg-white border rounded-lg p-4 flex items-center">
-              <span className="text-2xl mr-3">🤖</span>
-              <span className="font-medium">Comic-style robot</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-12 bg-gray-50 rounded-lg p-6">
-          <div className="flex items-center mb-2">
-            <span className="text-2xl mr-2">💡</span>
-            <h3 className="text-xl font-semibold">Need inspiration?</h3>
-          </div>
-          <p className="text-gray-600">Aggdonns, altiinset; sausettly, A100% to purchase.</p>
-        </div>
-      </main>
-    </div>
+        </footer>
+      </div>
   )
 }
