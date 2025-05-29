@@ -16,42 +16,27 @@ const BUCKET = process.env.S3_BUCKET!;
 
 
 
-export async function generateDesignFile(prompt: string) {
-  /* 1. Generate the image with OpenAI */
-  const { data } = await openai.images.generate({
-
-    model: "gpt-image-1",
-    prompt,
-    // size: "1024x1024",
-    background: "transparent",
-    quality: "high",
-    moderation: "low"
-  });
-  const base64 = data[0].b64_json;
-  const buffer = Buffer.from(base64, "base64");
-  console.log("Generated image...")
-
-    // const staticFilename = "1f892fcf-ab99-4b34-b688-18855298639e.jpg"
-    // const absPath = path.join(process.cwd(), "public", "generated", staticFilename);
-    //
-    // const buffer = await fs.readFile(absPath);
-    const key = `generated/${randomUUID()}.jpg`;
-
-
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET,
-        Key: key,
-        Body: buffer,
-        ContentType: "image/jpeg",
-      })
+export async function generateDesignFile(
+  prompt: string,
+  quality: string = "high",
+  background: string = "transparent"
+) {
+  const res = await fetch(
+    `${process.env.BACKEND_API_BASE_URL}/generate`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ prompt, quality, background })
+    }
   );
-
-  console.log("Sent to s3...")
-
-    const imageUrl = `${process.env.SITE_BASE_URL}/${key}`;
-    // const imageUrl = "https://teeverse-designs-eu.s3.eu-central-1.amazonaws.com/generated/c05d3f6e-8ca9-4d24-9555-6577ae030c0c.jpg"
-    return { success: true, imageUrl };
+  if (!res.ok) {
+    throw new Error(`Design generation failed: ${res.statusText}`);
+  }
+  const data = (await res.json()) as { url: string };
+  const imageUrl = data.url;
+  return { success: true, imageUrl };
 }
 
 let whiteShirtBuffer: Buffer | null = null;
@@ -59,7 +44,7 @@ async function loadBaseShirtWithLogo(): Promise<Buffer> {
   if (!whiteShirtBuffer) {
     const imageUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://your-project-name.vercel.app'}/tshirts/white-with-logo.png`;
 
-    const response = await fetch(imageUrl);
+      const response = await fetch(imageUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch image: ${response.statusText}`);
     }
