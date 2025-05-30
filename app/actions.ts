@@ -348,3 +348,35 @@ export async function createPrintfulProduct(
 
   return json.result;
 }
+
+export async function uploadReferenceImage(file: File) {
+  try {
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    
+    // Generate a unique filename
+    const filename = `${randomUUID()}.${file.name.split('.').pop()}`;
+    const key = `reference-images/${filename}`;
+    
+    // Upload to S3
+    await s3.send(new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+    }));
+
+    // Return the URL of the uploaded image
+    return {
+      success: true,
+      imageUrl: `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
+      filename: file.name
+    };
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    return {
+      success: false,
+      error: 'Failed to upload image'
+    };
+  }
+}

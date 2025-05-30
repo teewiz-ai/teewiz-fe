@@ -4,7 +4,7 @@ import { useState } from "react"
 import Image from "next/image"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/compat/router"
-import { Sparkles, Loader2 } from "lucide-react"
+import { Sparkles, Loader2, Paperclip, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge"
 import ColorPicker from "@/components/color-picker"
 import DesignStyleSelector from "@/components/design-style-selector"
 
-import { generateDesignFile, generateMockupDataUrl, createPrintfulProduct } from "@/app/actions"
+import { generateDesignFile, generateMockupDataUrl, createPrintfulProduct, uploadReferenceImage } from "@/app/actions"
 import { useAuth } from "@/components/useAuth"
+import imageCompression from "browser-image-compression";
 
 const TShirtCanvas = dynamic(() => import("@/components/TShirtCanvas.client"), {
   ssr: false,
@@ -32,6 +33,59 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [mockupUrl, setMockupUrl] = useState<string>("")
   const [designPosition, setDesignPosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null)
+  const [referenceImages, setReferenceImages] = useState<Array<{ url: string; filename: string; uploading: boolean }>>([])
+  const [isUploading, setIsUploading] = useState(false)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files?.length) return
+
+    setIsUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        // 1) Create a tiny preview version
+        const previewOptions = {
+          maxSizeMB: 0.1,
+          maxWidthOrHeight: 200,
+          useWebWorker: true,
+        }
+        const previewBlob = await imageCompression(file, previewOptions)
+        const previewUrl = URL.createObjectURL(previewBlob)
+
+        // 2) Immediately add that preview to state
+        setReferenceImages(prev => [
+          ...prev,
+          { url: previewUrl, filename: file.name, uploading: true },
+        ])
+
+        // 3) Fire off the full-resolution upload
+        const { success, imageUrl } = await uploadReferenceImage(file)
+        if (success) {
+          // 4) Replace the preview URL with the real S3 URL
+          setReferenceImages(prev =>
+              prev.map(img =>
+                  img.filename === file.name
+                      ? { url: imageUrl, filename: img.filename, uploading: false }
+                      : img
+              )
+          )
+        } else {
+          // handle error per‐file…
+        }
+
+        // 5) Clean up the preview blob URL
+        URL.revokeObjectURL(previewUrl)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const removeReferenceImage = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
 
   async function handleBuy() {
     try {
@@ -183,14 +237,49 @@ Provide only the design on a fully transparent background.`
                     </Badge>
                   </div>
                   <div className="relative">
-                    <Input
-                      placeholder="Describe your design idea..."
-                      className="h-12 pl-4 pr-12 text-base border-2 focus:border-purple-500 focus:ring-purple-500"
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <Sparkles className="h-5 w-5 text-purple-500" />
+                    {referenceImages.length > 0 && (
+                      <div className="flex gap-2 mb-2 overflow-x-auto pb-2">
+                        {referenceImages.map((img, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                                src={img.url}
+                                alt={img.filename}
+                                className="w-16 h-16 rounded-md object-cover"
+                            />
+                            <button
+                              onClick={() => removeReferenceImage(index)}
+                              className="absolute top-1 right-1 bg-white text-gray-500 rounded-full p-1 shadow-sm hover:bg-gray-50 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="relative">
+                      <Input
+                        placeholder="Describe your design idea..."
+                        className="h-12 pl-4 pr-24 text-base border-2 focus:border-purple-500 focus:ring-purple-500"
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <label 
+                          className="cursor-pointer hover:text-purple-500 transition-colors group" 
+                          title="Upload reference images"
+                        >
+                          <Paperclip className="h-5 w-5 group-hover:text-purple-500" />
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageUpload}
+                            disabled={isUploading}
+                          />
+                        </label>
+                        <Sparkles className="h-5 w-5 text-purple-500" />
+                      </div>
                     </div>
                   </div>
                   <p className="text-sm text-gray-500">Try: "retro neon cyber-cat with sunglasses" or "minimalist mountain landscape"</p>

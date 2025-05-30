@@ -20,6 +20,11 @@ const nextConfig = {
       // add extra patterns here (e.g., CloudFront URL) if you later switch
     ],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '3mb',
+    },
+  },
   webpack(config, { isServer }) {
     config.resolve.fallback = {
       ...config.resolve.fallback,
