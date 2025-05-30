@@ -171,42 +171,76 @@ Provide only the design on a fully transparent background.`
             </div>
 
             {/* Design Controls */}
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-lg">
-              <h2 className="text-xl font-semibold mb-4">Describe your design...</h2>
-              <Input
-                  placeholder="Describe your design..."
-                  className="mb-2"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-              />
-              <p className="text-gray-600 mb-6">e.g. "retro neon cyber-cat with sunglasses"</p>
-              <DesignStyleSelector selectedStyle={selectedStyle} onSelectStyle={setSelectedStyle} />
-              <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4">Color picker</h3>
-                <ColorPicker selectedColor={selectedColor} onSelectColor={setSelectedColor} />
+            <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-lg">
+              <div className="space-y-6">
+                {/* Prompt Section */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-900">Create Your Design</h2>
+                    <Badge variant="secondary" className="bg-purple-50 text-purple-700">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      AI-Powered
+                    </Badge>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      placeholder="Describe your design idea..."
+                      className="h-12 pl-4 pr-12 text-base border-2 focus:border-purple-500 focus:ring-purple-500"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500">Try: "retro neon cyber-cat with sunglasses" or "minimalist mountain landscape"</p>
+                </div>
+
+                {/* Style Selector */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-700">Art Style</h3>
+                  <DesignStyleSelector selectedStyle={selectedStyle} onSelectStyle={setSelectedStyle} />
+                </div>
+
+                {/* Color Picker */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-gray-700">T-Shirt Color</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <ColorPicker selectedColor={selectedColor} onSelectColor={setSelectedColor} />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3 pt-4">
+                  <Button
+                    className="w-full h-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                    onClick={handleGenerateAndPreview}
+                    disabled={isGenerating || !prompt.trim()}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating Design...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-5 w-5" /> Generate Design
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 text-gray-700 font-medium rounded-lg transition-all duration-200"
+                    onClick={handleBuy}
+                  >
+                    <span className="flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                      Buy Now
+                    </span>
+                  </Button>
+                </div>
               </div>
-              <Button
-                  className="w-full mt-8 bg-blue-500 hover:bg-blue-600 text-white py-6"
-                  onClick={handleGenerateAndPreview}
-                  disabled={isGenerating || !prompt.trim()}
-              >
-                {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Generating...
-                    </>
-                ) : (
-                    <>
-                      <Sparkles className="mr-2 h-5 w-5" /> Generate Design
-                    </>
-                )}
-              </Button>
-              <Button
-                  variant="outline"
-                  className="w-full mt-4 py-6 border-2"
-                  onClick={handleBuy}
-              >
-                Buy Now
-              </Button>
             </div>
           </div>
         </main>
