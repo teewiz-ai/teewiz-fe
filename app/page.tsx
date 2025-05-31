@@ -105,12 +105,15 @@ export default function Home() {
   const handleGenerateAndPreview = async () => {
     if (!prompt.trim()) return
     setIsGenerating(true)
+    const firstSampleUrl = referenceImages.length > 0
+        ? referenceImages[0].url
+        : undefined;
     try {
       const designPrompt = `Generate a high-resolution transparent PNG design (opacity = 1).
 Artwork description: "${prompt}".
 Render the artwork in "${selectedStyle}" style.
 Provide only the design on a fully transparent background.`
-      const result = await generateDesignFile(designPrompt)
+      const result = await generateDesignFile(designPrompt, "high", "transparent", firstSampleUrl)
       if (!result.success) throw new Error("Design generation failed")
       setDesignImage(result.imageUrl)
 

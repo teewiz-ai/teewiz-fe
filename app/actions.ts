@@ -19,24 +19,29 @@ const BUCKET = process.env.S3_BUCKET!;
 export async function generateDesignFile(
   prompt: string,
   quality: string = "high",
-  background: string = "transparent"
+  background: string = "transparent",
+  sampleImageUrl?: string
 ) {
+  const payload: Record<string, any> = { prompt, quality, background };
+  if (sampleImageUrl) {
+    payload.sampleImageUrl = sampleImageUrl;
+  }
+
   const res = await fetch(
-    `${process.env.BACKEND_API_BASE_URL}/generate`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ prompt, quality, background })
-    }
+      `${process.env.BACKEND_API_BASE_URL}/api/designs/generate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
   );
   if (!res.ok) {
     throw new Error(`Design generation failed: ${res.statusText}`);
   }
   const data = (await res.json()) as { url: string };
-  const imageUrl = data.url;
-  return { success: true, imageUrl };
+  return { success: true, imageUrl: data.url };
 }
 
 let whiteShirtBuffer: Buffer | null = null;
@@ -351,32 +356,57 @@ export async function createPrintfulProduct(
 
 export async function uploadReferenceImage(file: File) {
   try {
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    
-    // Generate a unique filename
-    const filename = `${randomUUID()}.${file.name.split('.').pop()}`;
-    const key = `reference-images/${filename}`;
-    
-    // Upload to S3
-    await s3.send(new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type,
-    }));
+    // 1) Ask Spring to presign for exactly this MIME type (e.g. "image/jpeg")
+    const presignRes = await fetch(
+        `${process.env.BACKEND_API_BASE_URL}/api/images/presign`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+          }),
+        }
+    );
 
-    // Return the URL of the uploaded image
+    if (!presignRes.ok) {
+      console.error("Presign error:", await presignRes.text());
+      throw new Error("Failed to get presigned URL");
+    }
+
+    interface PresignResponse {
+      presignUrl: string;
+      fileKey: string;
+      publicUrl: string;
+    }
+
+    const { presignUrl, publicUrl } = (await presignRes.json()) as PresignResponse;
+
+    // 2) Upload directly to S3, using the same Content-Type header
+    const putRes = await fetch(presignUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+
+    if (!putRes.ok) {
+      console.error("S3 PUT error:", await putRes.text());
+      throw new Error("Failed to upload to S3");
+    }
+
+    // 3) Return the publicly‐accessible URL
     return {
       success: true,
-      imageUrl: `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
-      filename: file.name
+      imageUrl: publicUrl,
+      filename: file.name,
     };
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error("uploadReferenceImage error:", error);
     return {
       success: false,
-      error: 'Failed to upload image'
+      error: (error as Error).message || "Unknown upload error",
     };
   }
 }
